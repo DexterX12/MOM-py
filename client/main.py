@@ -18,9 +18,13 @@ if __name__ == "__main__":
     cn = set_connection("q", "logs", "info")
 
     # Este es push
-    cn.publish("Hola carembola", lambda x: print(f"Se envio, con respuesta: {x}"))
+    cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x}"))
+    cn = set_connection("q", "prueba", "warning")
+    cn.publish("Mensaje2", lambda x: print(f"Se envio, con respuesta: {x}"))
+    cn = set_connection("q", "logs", "info")
+    cn.publish("Mensaje3", lambda x: print(f"Se envio, con respuesta: {x}"))
     
-    # Este es pull
-    #cn.consume(lambda x: print(f"El mensaje recibido fue: {x}"))
+    #Este es pull
+    cn.consume(lambda x: print(f"El mensaje recibido fue: {x}"))
 
 
