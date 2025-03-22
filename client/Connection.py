@@ -55,6 +55,8 @@ class Connection:
                 },
                 "body": message
             }
+        }, headers={
+            "Authorization": f"Bearer lakshdlkjasdijqlw;ijeljqwe"
         })
         
         callback(response)

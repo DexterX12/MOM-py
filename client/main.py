@@ -17,8 +17,8 @@ if __name__ == "__main__":
     
     cn = set_connection("q", "logs", "info")
 
-    # # Este es push
-    # cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x}"))
+    # Este es push
+    cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x.json()}"))
     # cn = set_connection("q", "prueba", "warning")
     # cn.publish("Mensaje2", lambda x: print(f"Se envio, con respuesta: {x}"))
     # cn = set_connection("q", "logs", "info")

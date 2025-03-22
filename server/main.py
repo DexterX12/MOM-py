@@ -22,7 +22,6 @@ def log_in():
 
     user = check_user(username, pw)
 
-    print(user)
     if not user:
         return jsonify({"error": "Invalid credentials!"}), 401
     
@@ -35,6 +34,7 @@ def post():
     data = request.json
     operation = data.get("operation")
     auth = request.headers.get("Authorization");
+    user = None
 
     if not auth:
         response = Response()
@@ -42,8 +42,18 @@ def post():
         response.headers["WWW-Authenticate"] = "Bearer"
 
         return response
+    elif len(auth.split(" ")) < 2:
+        return jsonify({"error": "No token provided"}), 401
     else:
-        pass
+        try:
+            token = auth.split(" ")[1]
+
+            # Not failing means they are who they claim to be
+            user = jwt.decode(token, app.secret_key, algorithms="HS256")
+            
+        except jwt.exceptions.InvalidTokenError:
+            return jsonify({"error": "Invalid token provided"}), 401
+        
     
     if operation not in ["pull", "push"]:
         return jsonify({"error": "Invalid operation :("}), 400
