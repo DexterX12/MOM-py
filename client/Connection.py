@@ -3,20 +3,27 @@ import json
 from time import time, sleep
 
 class Connection:
-    def __init__(self, type, exchange, routing_key, location):
+    def __init__(self, type, exchange, routing_key, config):
         self.type = type
         self.exchange = exchange
         self.routing_key = routing_key
-        self.location = location
+        self.location = config["MOM_SERVER_LOCATION"]
+        self.__connection_token = None
 
-        requests.post(self.location, json={
-            "operation": "auth"
+        response = requests.post(f"{self.location}/auth", json={
+            "user": config["USERNAME"],
+            "pass": config["PASSWORD"]
         })
 
+        token = response.json()["token"]
 
-        # Logic for checking if the connection was successfull and can be used
+        if (token):
+            self.__connection_token = token
 
     def consume(self, callback):
+        if not self.__connection_token:
+            return PermissionError("No authorization token has been provided")
+
         while True:
             response = requests.post(self.location, json={
                 "operation": "pull",
@@ -28,11 +35,16 @@ class Connection:
                     },
                     "body": None
                 }
+            }, headers={
+                "Authorization": f"Bearer {self.__connection_token}"
             })
             callback(response)
             sleep(5)
             
     def publish(self, message, callback):
+        if not self.__connection_token:
+            return PermissionError("No authorization token has been provided")
+        
         response = requests.post(self.location, json={
             "operation": "push",
             "data": {

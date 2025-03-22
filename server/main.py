@@ -1,28 +1,54 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import threading
 from collections import defaultdict
 from message import Message
+import jwt
 
 app = Flask(__name__)
 queues = defaultdict(list)
 
+app.config.from_prefixed_env() # ENVIROMENT VARIABLE FLASK_SECRET_KEY
 lock = threading.Lock()
 
 @app.route("/")
 def welcoming():
     return "<h1>MOM test</h1>"
 
+@app.route("/auth", methods=["POST"])
+def log_in():
+    data = request.json
+    username = data.get("user")
+    pw = data.get("pass")
+
+    user = check_user(username, pw)
+
+    print(user)
+    if not user:
+        return jsonify({"error": "Invalid credentials!"}), 401
+    
+    # expects and ID from user as bearer identifier
+    auth_token = jwt.encode({"id": user["id"]}, app.secret_key, algorithm="HS256")
+    return jsonify({"token": auth_token}), 200
+
 @app.route("/", methods=["POST"])
 def post():
     data = request.json
     operation = data.get("operation")
+    auth = request.headers.get("Authorization");
 
-    print(operation)
+    if not auth:
+        response = Response()
+        response.status_code = 401;
+        response.headers["WWW-Authenticate"] = "Bearer"
+
+        return response
+    else:
+        pass
     
-    if (operation not in ["auth", "pull", "push"]):
+    if operation not in ["pull", "push"]:
         return jsonify({"error": "Invalid operation :("}), 400
 
-    if (operation in ["pull", "push"]):
+    if operation in ["pull", "push"]:
         message_data = data.get("data")
         
         message = Message(
@@ -35,8 +61,6 @@ def post():
             return bind_queue(message)
         else:
             return pull(message)
-    else:
-        return jsonify({"auth": "fkor5oj34mgFdojFGhpAdme#"}), 200
         
 
  #Creation of the queue - exchange, routing key   
@@ -93,5 +117,25 @@ def pull(message):
         return jsonify({"error": "No messages available in the queue"}), 404
 
 
+# Check in DB if the client is indeed a registered user
+def check_user(username, password):
+    # BOILERPLATE, DO NOT USE IN FINAL
+
+    # Dummy user, this has to be a proper db check
+    if username == "admin" and password == "admin":
+        return {
+            "id": 1,
+            "username": "admin"
+        }
+
+# Check in DB which bearer the client claims to be
+def get_user(id):
+    # BOILERPLATE, DO NOT USE IN FINAL
+
+    # Dummy user, this has to be a proper db check
+    return {
+        "id": 1,
+        "username": "admin"
+    }
 
 

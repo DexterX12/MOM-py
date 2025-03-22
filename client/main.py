@@ -7,7 +7,7 @@ def set_connection(type, exchange, routing_key):
     if type not in ["q", "t"]:
         return TypeError("Incorrect type specified")
     
-    return Connection.Connection(type, exchange, routing_key, config["MOM_SERVER_LOCATION"])
+    return Connection.Connection(type, exchange, routing_key, config)
 
 
 if __name__ == "__main__":
@@ -17,14 +17,14 @@ if __name__ == "__main__":
     
     cn = set_connection("q", "logs", "info")
 
-    # Este es push
-    cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x}"))
-    cn = set_connection("q", "prueba", "warning")
-    cn.publish("Mensaje2", lambda x: print(f"Se envio, con respuesta: {x}"))
-    cn = set_connection("q", "logs", "info")
-    cn.publish("Mensaje3", lambda x: print(f"Se envio, con respuesta: {x}"))
+    # # Este es push
+    # cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x}"))
+    # cn = set_connection("q", "prueba", "warning")
+    # cn.publish("Mensaje2", lambda x: print(f"Se envio, con respuesta: {x}"))
+    # cn = set_connection("q", "logs", "info")
+    # cn.publish("Mensaje3", lambda x: print(f"Se envio, con respuesta: {x}"))
     
-    #Este es pull
-    cn.consume(lambda x: print(f"El mensaje recibido fue: {x}"))
+    # #Este es pull
+    # cn.consume(lambda x: print(f"El mensaje recibido fue: {x.json()}"))
 
 
