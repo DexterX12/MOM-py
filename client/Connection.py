@@ -56,7 +56,7 @@ class Connection:
                 "body": message
             }
         }, headers={
-            "Authorization": f"Bearer lakshdlkjasdijqlw;ijeljqwe"
+            "Authorization": f"Bearer {self.__connection_token}"
         })
         
         callback(response)
