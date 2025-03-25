@@ -87,7 +87,7 @@ def post():
         if operation == "push" and msg_type=="q":
             return bind_queue(message)
         elif operation == "pull" and msg_type=="q":
-            return pull(message)
+            return pull(message, history)
         elif operation == "push" and msg_type=="t":
             return push_to_topic(message)
         elif operation == "pull" and msg_type=="t":
@@ -121,6 +121,7 @@ def bind_queue(message):
                 exchanges[exchange].append({
                     "routing_key": routing_key,
                     "queue_name": queue_name,
+                    "users_subscribed": [],
                     "queue": [message]
                 })
 
@@ -132,7 +133,8 @@ def bind_queue(message):
         }), 200
     
 #client requests a message in the queue
-def pull(message):
+def pull(message, history):
+    print("HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
 
@@ -145,7 +147,8 @@ def pull(message):
         with lock:
             if exchange in exchanges:
                 for queue in exchanges[exchange]:
-                    if queue["routing_key"] == routing_key and queue["queue"]:
+                    print("hola",queue["users_subscribed"])
+                    if queue["routing_key"] == routing_key and queue["queue"] and (history[0]["id"] in queue["users_subscribed"]):
                         message = queue["queue"].pop(0)
                         return jsonify({
                         "status": "Message delivered",
@@ -247,33 +250,47 @@ def pull_topic(message, history):
 
 def subscribe(msg_type, history, message):
     user_id = history[0]["id"]
-    data = request.json
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
     
 
     if not exchange or not routing_key:
-        print("hola")
         return jsonify({"error": "Missing exchange or routing_key"}), 400
-    
 
     queue_name = f"{exchange}_{routing_key}"
-    
-    with lock:
-        if exchange not in topics_exchange or not any(topic["routing_key"] == routing_key for topic in topics_exchange[exchange]):
-            return jsonify({"error": "Topic does not exist"}), 400 
-        
-        for topic in topics_exchange[exchange]:
-            if topic["routing_key"] == routing_key:
-                if user_id not in topic["users_subscribed"]:
-                    topic["users_subscribed"].append(user_id)
-                    user_queues[user_id] = topic["topics"].copy()
-                break
 
-    return jsonify({
-        "status": "Subscribed",
-        "user_id": user_id,
-        "queue_name": queue_name,
-        "exchange": exchange,
-        "routing_key": routing_key
-    }), 200
+    if msg_type == "t":
+        with lock:
+            if exchange not in topics_exchange or not any(topic["routing_key"] == routing_key for topic in topics_exchange[exchange]):
+                return jsonify({"error": "Topic does not exist"}), 400 
+            
+            for topic in topics_exchange[exchange]:
+                if topic["routing_key"] == routing_key:
+                    if user_id not in topic["users_subscribed"]:
+                        topic["users_subscribed"].append(user_id)
+                        user_queues[user_id] = topic["topics"].copy()
+                    break
+
+        return jsonify({
+            "status": "Subscribed to topic",
+            "user_id": user_id,
+            "queue_name": queue_name,
+            "exchange": exchange,
+            "routing_key": routing_key
+        }), 200
+    else:
+        with lock:
+            if exchange not in exchanges or not any(q["routing_key"] == routing_key for q in exchanges[exchange]):
+                return jsonify({"error": "Queue does not exist"}), 400 
+            
+            for exchange in exchanges[exchange]:
+                if exchange["routing_key"] == routing_key:
+                    if user_id not in exchange["users_subscribed"]:
+                        exchange["users_subscribed"].append(user_id)
+                    break
+
+        return jsonify({
+            "status": "Subscribed to queue",
+            "user_id": user_id,
+            "queue_name": queue_name
+        }), 200
