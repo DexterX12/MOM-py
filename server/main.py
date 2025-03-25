@@ -4,6 +4,7 @@ from collections import defaultdict
 from message import Message
 import jwt
 import json
+from DBscript import auth, get_user
 app = Flask(__name__)
 
 queues = defaultdict(list) #queues in exchanges dictionary 
@@ -26,7 +27,7 @@ def log_in():
     username = data.get("user")
     pw = data.get("pass")
 
-    user = check_user(username, pw)
+    user = auth(username, pw)
 
     if not user:
         return jsonify({"error": "Invalid credentials!"}), 401
@@ -59,6 +60,8 @@ def post():
 
             # Not failing means they are who they claim to be
             user = jwt.decode(token, app.secret_key, algorithms="HS256")
+            history = []
+            history.append(user)
             
         except jwt.exceptions.InvalidTokenError:
             return jsonify({"error": "Invalid token provided"}), 401
@@ -157,25 +160,25 @@ def pull(message):
 #-------------------------USER--------------------------
 
 # Check in DB if the client is indeed a registered user
-def check_user(username, password):
-    # BOILERPLATE, DO NOT USE IN FINAL
+# def check_user(username, password):
+#     # BOILERPLATE, DO NOT USE IN FINAL
 
-    # Dummy user, this has to be a proper db check
-    if username == "admin" and password == "admin":
-        return {
-            "id": 1,
-            "username": "admin"
-        }
+#     # Dummy user, this has to be a proper db check
+#     if username == "admin" and password == "admin":
+#         return {
+#             "id": 1,
+#             "username": "admin"
+#         }
 
-# Check in DB which bearer the client claims to be
-def get_user(id):
-    # BOILERPLATE, DO NOT USE IN FINAL
+# # Check in DB which bearer the client claims to be
+# def get_user(id):
+#     # BOILERPLATE, DO NOT USE IN FINAL
 
-    # Dummy user, this has to be a proper db check
-    return {
-        "id": 1,
-        "username": "admin"
-    }
+#     # Dummy user, this has to be a proper db check
+#     return {
+#         "id": 1,
+#         "username": "admin"
+#     }
 
 #-------------------------TOPICS--------------------------
 
