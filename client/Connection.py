@@ -27,6 +27,7 @@ class Connection:
         while True:
             response = requests.post(self.location, json={
                 "operation": "pull",
+                "type": self.type,
                 "data": {
                     "headers": {
                         "exchange": self.exchange,
@@ -47,6 +48,7 @@ class Connection:
         
         response = requests.post(self.location, json={
             "operation": "push",
+            "type": self.type,
             "data": {
                 "headers": {
                     "exchange": self.exchange,
@@ -60,3 +62,22 @@ class Connection:
         })
         
         callback(response)
+    
+    def subscribe(self, callback):
+        if not self.__connection_token:
+            return PermissionError("No authorization token has been provided")
+        
+        response = requests.post(self.location, json={
+            "operation": "subscribe",
+            "type": self.type,
+            "data": {
+                "headers": {
+                    "exchange": self.exchange,
+                    "routing_key": self.routing_key,
+                    "message_date": None
+                },
+                "body": None
+            }
+        }, headers={
+            "Authorization": f"Bearer {self.__connection_token}"
+        })
