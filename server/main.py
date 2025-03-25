@@ -10,6 +10,10 @@ app = Flask(__name__)
 queues = defaultdict(list) #queues in exchanges dictionary 
 exchanges = {} #dictionary that stores messages in queues with an associated exchange and routing_key
 
+topics = defaultdict(list) #topics in topics_exchange dictionary 
+topics_exchange = {} #dictionary that stores messages in topics with an associated exchange and routing_key
+user_queues = defaultdict(list)
+
 #app.config.from_prefixed_env() # ENVIROMENT VARIABLE FLASK_SECRET_KEY
 app.secret_key = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 lock = threading.Lock()
@@ -24,9 +28,9 @@ def welcoming():
 @app.route("/auth", methods=["POST"])
 def log_in():
     data = request.json
+    print(data)
     username = data.get("user")
     pw = data.get("pass")
-
     user = auth(username, pw)
 
     if not user:
@@ -66,15 +70,12 @@ def post():
         except jwt.exceptions.InvalidTokenError:
             return jsonify({"error": "Invalid token provided"}), 401
         
-    if operation == "subscribe":
-
-        pass
 
     
-    if operation not in ["pull", "push"]:
+    if operation not in ["pull", "push", "subscribe"]:
         return jsonify({"error": "Invalid operation :("}), 400
 
-    if operation in ["pull", "push"]:
+    if operation in ["pull", "push", "subscribe"]:
         message_data = data.get("data")
         
         message = Message(
@@ -90,7 +91,9 @@ def post():
         elif operation == "push" and msg_type=="t":
             return push_to_topic(message)
         elif operation == "pull" and msg_type=="t":
-            return pull_topic(message)
+            return pull_topic(message, history)
+        elif operation=="subscribe":
+            return subscribe(msg_type, history,message)
     
         
 #-------------------------Queues--------------------------
@@ -183,8 +186,94 @@ def pull(message):
 #-------------------------TOPICS--------------------------
 
 def push_to_topic(message):
-    pass
+    exchange = message.header["exchange"] 
+    routing_key = message.header["routing_key"]
+
+    if not exchange or not routing_key:
+        return jsonify({"error": "Missing exchange or routing_key"}), 400
+
+    queue_name = f"{exchange}_{routing_key}"
+    
+    with lock:
+        if exchange not in topics_exchange:
+            topics_exchange[exchange] = []
+
+        for topic in topics_exchange[exchange]:
+            if topic["routing_key"] == routing_key:
+                topic["topics"].append(message)
+
+                for user in topic["users_subscribed"]:
+                    user_queues[user].append(message)
+                
+                break
+        else:
+            topics_exchange[exchange].append({
+                "routing_key": routing_key,
+                "queue_name": queue_name,
+                "topics": [message],
+                "users_subscribed": []
+            })
+    print(topics_exchange)
+
+    return jsonify({
+        "status": "Message pushed",
+        "queue_name": queue_name,
+        "exchange": exchange,
+        "routing_key": routing_key
+    }), 200
 
 
-def pull_topic(message):
-    pass
+
+def pull_topic(message, history):
+    user_id = history[0]["id"] 
+    if not user_id:
+        return jsonify({"error": "Missing user ID"}), 400
+
+    with lock:
+        if user_id in user_queues and user_queues[user_id]:
+            msg = user_queues[user_id].pop(0)  
+            return jsonify({
+                "status": "Message delivered",
+                "message": {
+                    "message_date": msg.header["message_date"],  
+                    "routing_key": msg.header["routing_key"],  
+                    "exchange": msg.header["exchange"], 
+                    "body": msg.body
+                }
+            }), 200
+
+    return jsonify({"error": "No messages available"}), 404
+
+
+def subscribe(msg_type, history, message):
+    user_id = history[0]["id"]
+    data = request.json
+    exchange = message.header["exchange"] 
+    routing_key = message.header["routing_key"]
+    
+
+    if not exchange or not routing_key:
+        print("hola")
+        return jsonify({"error": "Missing exchange or routing_key"}), 400
+    
+
+    queue_name = f"{exchange}_{routing_key}"
+    
+    with lock:
+        if exchange not in topics_exchange or not any(topic["routing_key"] == routing_key for topic in topics_exchange[exchange]):
+            return jsonify({"error": "Topic does not exist"}), 400 
+        
+        for topic in topics_exchange[exchange]:
+            if topic["routing_key"] == routing_key:
+                if user_id not in topic["users_subscribed"]:
+                    topic["users_subscribed"].append(user_id)
+                    user_queues[user_id] = topic["topics"].copy()
+                break
+
+    return jsonify({
+        "status": "Subscribed",
+        "user_id": user_id,
+        "queue_name": queue_name,
+        "exchange": exchange,
+        "routing_key": routing_key
+    }), 200
