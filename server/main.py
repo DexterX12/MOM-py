@@ -3,8 +3,10 @@ import threading
 from collections import defaultdict
 from message import Message
 import jwt
-import json
+
 from DBscript import auth, get_user
+from zkclient import ZooKeeperClient
+
 app = Flask(__name__)
 
 queues = defaultdict(list) #queues in exchanges dictionary 
@@ -17,11 +19,16 @@ user_queues = defaultdict(list)
 #app.config.from_prefixed_env() # ENVIROMENT VARIABLE FLASK_SECRET_KEY
 app.secret_key = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 lock = threading.Lock()
+zkcl = None
+
+with app.app_context():
+    zkcl = ZooKeeperClient()
 
 @app.route("/")
 def welcoming():
+    key = request.args.get("key")
+    zkcl.track_partition(key)
     return "<h1>MOM test</h1>"
-
 
 #-------------------------Log in--------------------------
 
@@ -125,6 +132,8 @@ def bind_queue(message):
                     "queue": [message]
                 })
 
+        zkcl.track_partition(routing_key)
+
         return jsonify({
             "status": "Message pushed",
             "queue_name": queue_name,
@@ -162,30 +171,6 @@ def pull(message, history):
                     }), 200
         return jsonify({"error": "No messages available in the queue"}), 404
 
-
-#-------------------------USER--------------------------
-
-# Check in DB if the client is indeed a registered user
-# def check_user(username, password):
-#     # BOILERPLATE, DO NOT USE IN FINAL
-
-#     # Dummy user, this has to be a proper db check
-#     if username == "admin" and password == "admin":
-#         return {
-#             "id": 1,
-#             "username": "admin"
-#         }
-
-# # Check in DB which bearer the client claims to be
-# def get_user(id):
-#     # BOILERPLATE, DO NOT USE IN FINAL
-
-#     # Dummy user, this has to be a proper db check
-#     return {
-#         "id": 1,
-#         "username": "admin"
-#     }
-
 #-------------------------TOPICS--------------------------
 
 def push_to_topic(message):
@@ -218,6 +203,7 @@ def push_to_topic(message):
             })
     print(topics_exchange)
 
+    zkcl.track_partition(routing_key)
     return jsonify({
         "status": "Message pushed",
         "queue_name": queue_name,

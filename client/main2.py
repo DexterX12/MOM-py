@@ -21,7 +21,7 @@ if __name__ == "__main__":
     # cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x.json()}"))
 
     #Push topic
-    cn = set_connection("t", "logs", "info")
+    cn = set_connection("t", "logs", "warnings")
     cn.publish("Mensaje4", lambda x: print(f"Se envio, con respuesta: {x}"))
     
     #Pull Queue
@@ -29,11 +29,11 @@ if __name__ == "__main__":
     # cn.consume(lambda x: print(f"El mensaje recibido fue: {x.json()}"))
 
     #Subscribe topic
-    cn = set_connection("t", "logs", "info")
-    cn.subscribe( lambda x: print(f"Se envio, con respuesta: {x.json()}"))
+    #cn = set_connection("t", "logs", "info")
+    #cn.subscribe( lambda x: print(f"Se envio, con respuesta: {x.json()}"))
 
     #Pull topic
-    cn.consume(lambda x: print(f"El mensaje recibido fue: {x.json()}"))
+    #cn.consume(lambda x: print(f"El mensaje recibido fue: {x.json()}"))
 
     # cn = set_connection("q", "logs", "info")
     # cn.subscribe( lambda x: print(f"Se envio, con respuesta: {x.json()}"))
