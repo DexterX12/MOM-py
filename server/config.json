@@ -1,5 +1,5 @@
 {
-    "ZOOKEEPER_LOCATION": "127.0.0.1:2181",
+    "ZOOKEEPER_LOCATION": "158.247.127.78:6666",
     "NODES_LOCATION": "/connected/",
     "PARTITIONS_LOCATION": "/partitions/"
 }

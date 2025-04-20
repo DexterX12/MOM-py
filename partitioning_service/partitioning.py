@@ -1,9 +1,5 @@
 import hashlib
 import bisect
-from kazoo.client import KazooClient
-
-IP_ZOOKEEPER = "158.247.127.78:6666" #IP que nos dio delvincin
-
 class ConsistentHashRing:
     def __init__(self, replicas=5):
         self.replicas = replicas  #Número de nodos virtuales por nodo físico (para mejor balanceo), se supone que entre mas, mejor
@@ -43,45 +39,3 @@ class ConsistentHashRing:
         return self.ring[self.sorted_keys[idx]] #Devuelve el nodo con esta clave
 
 
-#Nos conectamos a ZooKeeper
-zk = KazooClient(hosts=IP_ZOOKEEPER)
-zk.start()
-ruta = "connected/"
-
-#Prueba creando n nodos
-informacion = "192.168.1.1:12345"
-zk.create(f"{ruta}nodo1", value=bytes(informacion, "utf-8"), ephemeral=True)
-informacion = "192.168.1.2:12345"
-zk.create(f"{ruta}nodo2", value=bytes(informacion, "utf-8"), ephemeral=True)
-informacion = "192.168.1.3:12345"
-zk.create(f"{ruta}nodo3", value=bytes(informacion, "utf-8"), ephemeral=True)
-informacion = "192.168.1.4:12345"
-zk.create(f"{ruta}nodo4", value=bytes(informacion, "utf-8"), ephemeral=True)
-informacion = "192.168.1.5:12345"
-zk.create(f"{ruta}nodo5", value=bytes(informacion, "utf-8"), ephemeral=True)
-informacion = "192.168.1.6:12345"
-zk.create(f"{ruta}nodo6", value=bytes(informacion, "utf-8"), ephemeral=True)
-
-#Nodos disponibles
-nodos = zk.get_children(ruta)
-print("Nodos disponibles:", nodos)
-
-#Inicializar anillo de Consistent Hashing
-ring = ConsistentHashRing(replicas=100)  #Mientras más réplicas, más uniforme la distribución, se puede cambiar si quieren
-
-#Añadir nodos al anillo
-for nodo in nodos:
-    ring.add_node(nodo)
-
-#Lista de routing_keys de prueba
-routing_keys = [
-    "logs", "warning", "info", "processed", "error", "successful","detention", "passed", "parsed", "signin", "logout", "information"
-]
-
-#Asignar cada routing_key a un nodo
-for key in routing_keys:
-    nodo_asignado = ring.get_node(key)
-    print(f"routing_key '{key}' → nodo '{nodo_asignado}'")
-
-#Cerrar conexión con ZooKeeper
-zk.stop()
