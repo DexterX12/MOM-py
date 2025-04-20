@@ -96,7 +96,3 @@ class ZooKeeperClient():
         @self.zk.ChildrenWatch(path=self.BASE_PATH+partition)
         def call_follower(children):
             self.follower_function()
-
-
-
-

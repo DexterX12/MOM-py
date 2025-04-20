@@ -24,7 +24,7 @@ zkcl = None
 with app.app_context():
     zkcl = ZooKeeperClient()
 
-@app.route("/")
+@app.route("/", methods=["GET"])
 def welcoming():
     key = request.args.get("key")
     zkcl.track_partition(key)
@@ -91,6 +91,7 @@ def post():
             exchange=message_data["headers"].get("exchange"),
             content=message_data.get("body")
         )
+        
         if operation == "push" and msg_type=="q":
             return bind_queue(message)
         elif operation == "pull" and msg_type=="q":

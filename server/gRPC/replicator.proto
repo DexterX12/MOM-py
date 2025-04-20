@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+service Replicate {
+    rpc PopulateReplication (MessageMOM) returns (ReplicationSuccess) {}
+}
+
+message MessageMOM {
+    string operation = 1;
+    string type = 2;
+    string exchange = 3;
+    string routing_key = 4;
+    uint64 message_date = 5;
+    string body = 6; 
+}
+
+message ReplicationSuccess {
+    bool success = 1;
+}
