@@ -55,8 +55,11 @@ Este proyecto requiere ***al menos*** Python 3.10, utilizando las siguientes lib
 * **sqlite3:** API de base de datos para registro (manual) de usuarios 
 * **grpc & grpc-tools:** API de comunicación utilizando el protocolo gRPC, además de las herramientas para compilar los archivos .proto
 * **flask:** Exponer una API REST a través de un servidor HTTP
+* **jwt:** Autenticación mediante tokens
 
 Además de Python, se utiliza **Apache ZooKeeper** en su versión 3.8.4, la última versión estable recomendada al día de esta publicación (04/20/2025).
+
+La comunicación entre consumidores y 	MOMs es gracias a la **API Gateway** de AWS, el cual funciona como intermediario para enrutar los mensajes y autenticar los usuarios. Esto se puede reemplazar utilizando flask como servidor intermediario.
 
 #### Servidor
 Dentro del directorio `/server` se encuentran los archivos para ejecutar un nodo MOM.
@@ -73,3 +76,57 @@ Por defecto, la URL de conexión con ZooKeeper, y el nombre de los *path* donde 
 
 Dentro del directorio `/server/gRPC` se encuentran los archivos para el servicio de replicación. El archivo `replication.proto` establece los métodos y tipos de mensaje. Por defecto, este servicio se ejecuta en conjunto con el servidor MOM, y es éste el que se encarga de enviar cada nuevo mensaje de algún MOM a todos los demás.
 
+#### Autenticación
+Dentro del directorio `/auth` se tiene el servidor encargado de la autenticación de las peticiones generadas por usuarios. Para ejecutarlo, se utiliza el siguiente comando: `flask --app main run -p {PORT}` donde PORT indica el puerto en el cual se desea exponer el servidor. 
+
+Para ejecutar el servicio de autenticación, es necesario brindar una *secret key* que permita decodificar el token, esta se debe provisionar como una variable de entorno, la cual es identificada como `FLASK_SECRET_KEY`
+
+#### Particionamiento
+Dentro del directorio `/partitioning_service` está el servicio de particionamiento, el cual se ejecuta con  `flask --app main run -p {PORT}` donde PORT indica el puerto en el cual se desea exponer el servidor. Este servidor debería estar corriendo en el mismo nodo de ZooKeeper, para asistir al Routing Tier en la localización de los nodos.
+
+#### Cliente
+Dentro del directorio `/client` se encuentran los archivos para realizar la conexión hacia el servidor. Dentro del archivo `config.json` se encuentra la configuración de conexión: la URL de la API, y el usuario y contraseña del cliente que ha sido previamente registrado.
+
+```json
+{
+    "API_SERVER_LOCATION": "http://127.0.0.1:8080",
+    "USERNAME": "admin",
+    "PASSWORD": "admin"
+}
+```
+Dentro del mismo directorio se encuentra el archivo `Connection.py` el cual se encarga de establecer la comunicación y conexión inicial, además de la autenticación hacia el servidor. Este archivo es necesario para cualquier conexión, en caso de probar conexiones manuales. El archivo `main.py` posee un ejemplo con diferentes mensajes.
+
+Para establecer una conexión inicial hacia el servidor, se puede utilizar el siguiente snippet:
+```python
+import json, pathlib
+import Connection
+
+config = None # Archivo de configuración
+
+
+def load_config():
+	global config
+    path = pathlib.Path("config.json")
+    with open(f"{pathlib.Path.absolute(path)}", "r") as file:
+        config = json.load(file) # Cargar configuración en JSON
+
+def set_connection(type, exchange, routing_key):
+    if type not in ["q", "t"]:
+        return TypeError("Incorrect type specified")
+    
+    return Connection.Connection(type, exchange, routing_key, config)
+
+
+if __name__ == "__main__":
+	load_config()
+
+    #Push Queue
+    cn = set_connection("q", "logs", "info")
+    cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x.json()}"))
+```
+
+## Referencias
+1. _ActiveMQ con Message Oriented Middleware_. (s. f.). SG Buzz. https://sg.com.mx/revista/41/activemq-message-oriented-middleware
+2. Kleppmann, M. (2017). _Designing Data-Intensive Applications: The Big Ideas Behind Reliable, Scalable, and Maintainable Systems_. «O’Reilly Media, Inc.»
+3. _Partitioning and replication: benefits & challenges_. (s. f.). A Curious Mind. https://dimosr.github.io/partitioning-and-replication/
+4. Kumili, L. (2024, 4 diciembre). The Power of Kafka Keys: Why Choosing the Right One Matters. _Medium_. https://medium.com/@leela.kumili/the-power-of-kafka-keys-why-choosing-the-right-one-matters-adbe80785dc5
