@@ -34,7 +34,14 @@ Las peticiones que los clientes realizan para suscribirse o publicar en algún t
 
 ![Localización de la información](https://i.imgur.com/OCggPAx.png)
 
-*Enrutamiento de la información*
+*Enrutamiento de la información²*
 
 En el caso de este proyecto, el routing tier es la API Gateway, la cual a través de una función Lambda, le pregunta al servicio de particionamiento (que funciona en el nodo como un servicio junto a ZooKeeper), que nodo le pertenece la *routing key* del mensaje entrante, para luego devolver la dirección del MOM y reenviar la petición. Finalmente, la respuesta es devuelta al cliente que originalmente inició la petición.
 
+Para mantener control de qué nodos existen y cuáles son lideres de cada partición para garantizar el correcto orden de replicación, se utiliza Apache ZooKeeper, el cual posee una estructura inspirada en sistemas de archivos, lo que permite guardar de manera estructurada la información de los nodos que hagan parte del servicio, además de la capacidad de obtener cambios en la topología, y algoritmos de elección de lider.
+
+![Estructura de control](https://i.imgur.com/kebebLU.png)
+
+*Control de nodos MOM mediante ZooKeeper*
+
+Cada uno de los nodos le ofrece a ZooKeeper la metadata relevante para la comunicación de mensajes, así como para temas de particionamiento y replicación.
