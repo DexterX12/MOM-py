@@ -6,7 +6,7 @@ Los requerimientos funcionales iniciales consisten en garantizar la comunicació
 
 ![Flujo básico de comunicación en MOMs](https://i.imgur.com/rTS0IbU.png)
 
-*Flujo básico de comunicación en MOMs**¹***
+*Figura 1: Flujo básico de comunicación en MOMs**¹***
 
 Además, para asegurarse de que la comunicación solo se realiza entre usuarios autorizados, el servicio debe implementar algún tipo de autenticación.
 Finalmente, respecto al aspecto no funcional, se debe implementar mecanismos para garantizar la tolerancia a fallos, mecanismos presentes en sistemas distribuidos como la ***replicación y particionamiento*** de los datos, además de la forma en como estos son replicados y particionados.
@@ -15,7 +15,8 @@ En la siguiente sección se presentará las decisiones tomadas para un acercamie
 ## Diseño y elección de patrones
 Respecto a la parte funcional, se tomaron en cuenta los siguientes aspectos:
 #### Mensajería, colas y tópicos
-* Los mensajes son identificados mediante una llave o "routing key", permitiendo el enrutamiento de estos a sus correspondientes colas/tópicos.
+* Los mensajes son identificados mediante una llave o *routing key*, permitiendo el enrutamiento de estos a sus correspondientes colas/tópicos.
+* Cada tópico o cola hace parte de un *exchange*, el cual permite el proceso de enrutamiento de cada uno de los mensajes.
 * Cada instancia de MOM posee una lista de usuarios "suscritos" a un tópico, creando una cola especial para cada usuario suscrito. Esto a su vez utiliza el ***mecanismo de pull***, donde cada cliente es responsable de verificar la existencia de nuevos mensajes en el tiempo.
 #### Autenticación
 * El ingreso de usuarios nuevos a la base de datos es manual, por lo que no se ha implementado un frontend que permita el registro de usuarios.
@@ -28,20 +29,47 @@ El servicio está desarrollado en su totalidad en Python, utilizando gRPC como p
 
 ![Arquitectura principal](https://i.imgur.com/g7F7KbH.png)
 
-*Arquitectura principal del servicio*
+*Figura 2: Arquitectura principal del servicio*
+
+Los nodos MOM poseen por aparte un servicio de replicación el cual utiliza gRPC para la comunicación. Cada nodo es cliente y servidor a la vez, permitiendo recibir peticiones de replicación por parte de otros nodos, y tener la capacidad de enviar peticiones a otros.
 
 Las peticiones que los clientes realizan para suscribirse o publicar en algún tópico o cola son redireccionados a través de la API Gateway, de AWS, utilizando una función Lambda, también, de AWS. La necesidad del redireccionamiento proviene del principio de particionamiento; es necesario llevar el mensaje que el cliente necesita entregar a la cola o tópico correspondiente, sin importar en el nodo en que se encuentre, y este proceso debe ser transparente para el usuario. Por esta razón, se aplicó la siguiente arquitectura de localización de la información:
 
 ![Localización de la información](https://i.imgur.com/OCggPAx.png)
 
-*Enrutamiento de la información²*
+*Figura 3: Enrutamiento de la información²*
 
 En el caso de este proyecto, el routing tier es la API Gateway, la cual a través de una función Lambda, le pregunta al servicio de particionamiento (que funciona en el nodo como un servicio junto a ZooKeeper), que nodo le pertenece la *routing key* del mensaje entrante, para luego devolver la dirección del MOM y reenviar la petición. Finalmente, la respuesta es devuelta al cliente que originalmente inició la petición.
 
-Para mantener control de qué nodos existen y cuáles son lideres de cada partición para garantizar el correcto orden de replicación, se utiliza Apache ZooKeeper, el cual posee una estructura inspirada en sistemas de archivos, lo que permite guardar de manera estructurada la información de los nodos que hagan parte del servicio, además de la capacidad de obtener cambios en la topología, y algoritmos de elección de lider.
+Para mantener control de qué nodos existen y cuáles son lideres de cada partición para garantizar el correcto orden de replicación, se utiliza **Apache ZooKeeper**, el cual posee una estructura inspirada en sistemas de archivos, lo que permite guardar de manera estructurada la información de los nodos que hagan parte del servicio, además de la capacidad de obtener cambios en la topología en tiempo real, y algoritmos de elección de lider.
 
 ![Estructura de control](https://i.imgur.com/kebebLU.png)
 
-*Control de nodos MOM mediante ZooKeeper*
+*Figura 4: Control de nodos MOM mediante ZooKeeper*
 
 Cada uno de los nodos le ofrece a ZooKeeper la metadata relevante para la comunicación de mensajes, así como para temas de particionamiento y replicación.
+
+## Ejecución
+Este proyecto requiere ***al menos*** Python 3.10, utilizando las siguientes librerías:
+* **kazoo:** API de comunicación para ZooKeeper
+* **sqlite3:** API de base de datos para registro (manual) de usuarios 
+* **grpc & grpc-tools:** API de comunicación utilizando el protocolo gRPC, además de las herramientas para compilar los archivos .proto
+* **flask:** Exponer una API REST a través de un servidor HTTP
+
+Además de Python, se utiliza **Apache ZooKeeper** en su versión 3.8.4, la última versión estable recomendada al día de esta publicación (04/20/2025).
+
+#### Servidor
+Dentro del directorio `/server` se encuentran los archivos para ejecutar un nodo MOM.
+Para ejecutar el servicio de mensajería se utiliza el siguiente comando: `flask --app main run -p {PORT}` donde PORT indica el puerto en el cual se desea exponer el servidor. Cada petición de mensaje que llegue al servidor será registrada automáticamente por el servicio de ZooKeeper.
+
+Por defecto, la URL de conexión con ZooKeeper, y el nombre de los *path* donde se guardan las particiones y nodos se encuentran en el archivo de configuración `config.json`, que tiene este aspecto por defecto:
+```json
+{
+"ZOOKEEPER_LOCATION":  "127.0.0.1:2181",
+"NODES_LOCATION":  "/connected/",
+"PARTITIONS_LOCATION":  "/partitions/"
+}
+```
+
+Dentro del directorio `/server/gRPC` se encuentran los archivos para el servicio de replicación. El archivo `replication.proto` establece los métodos y tipos de mensaje. Por defecto, este servicio se ejecuta en conjunto con el servidor MOM, y es éste el que se encarga de enviar cada nuevo mensaje de algún MOM a todos los demás.
+
