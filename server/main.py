@@ -2,9 +2,7 @@ from flask import Flask, request, jsonify, Response
 import threading
 from collections import defaultdict
 from message import Message
-import jwt
 
-from DBscript import auth, get_user
 from zkclient import ZooKeeperClient
 
 app = Flask(__name__)
