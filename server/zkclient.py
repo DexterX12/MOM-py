@@ -2,7 +2,7 @@ from kazoo.client import KazooClient
 from time import sleep
 from functools import partial
 from util import get_machine_ip
-import kazoo.exception
+import kazoo.exceptions
 import threading
 import uuid
 import socket
@@ -25,7 +25,7 @@ class ZooKeeperClient():
         self.zk.start(timeout=5)
         self.zk.ensure_path(self.BASE_PATH)
         
-        self.node_name = uuid.uuid4()
+        self.node_name = str(uuid.uuid4())
         self.machine_ip = socket.gethostbyname(socket.getfqdn())
 
         self.zk.ensure_path(self.NODES_PATH)
@@ -87,7 +87,7 @@ class ZooKeeperClient():
 
         path = f"{self.BASE_PATH}{routing_key}/leader"
         try:
-            self.zk.create(path, ephemeral=True, value=bytes(self.node_name, encoding="utf-8"))
+            self.zk.create(path, ephemeral=True, value=bytes(str(self.node_name), encoding="utf-8"))
         except kazoo.exceptions.NodeExistsError:
             pass
 
