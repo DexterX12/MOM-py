@@ -1,7 +1,8 @@
 from kazoo.client import KazooClient
 from time import sleep
 from functools import partial
-import kazoo.exceptions
+from util import get_machine_ip
+import kazoo.exception
 import threading
 import uuid
 import socket

@@ -22,7 +22,6 @@ def log_in():
 
 @app.route("/validate", methods=["POST"])
 def check_token():
-    data = request.json
     auth = request.headers.get("Authorization")
     user = None
 

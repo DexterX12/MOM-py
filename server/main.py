@@ -18,10 +18,6 @@ user_queues = defaultdict(list)
 #app.config.from_prefixed_env() # ENVIROMENT VARIABLE FLASK_SECRET_KEY
 lock = threading.Lock()
 zkcl = None
-FLASK_PORT = None
-
-with app.app_context():
-    
 
 @app.route("/", methods=["GET"])
 def welcoming():
@@ -253,4 +249,6 @@ if __name__ == "__main__":
     sock.bind(('localhost', 0))
     port = sock.getsockname()[1]
     sock.close()
+
+    zkcl = ZooKeeperClient(port)
     app.run(port=port)
