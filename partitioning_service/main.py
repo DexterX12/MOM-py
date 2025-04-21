@@ -29,7 +29,7 @@ def cargar_nodos(children):
 @app.route("/routing", methods=["POST"])
 def routing():
     data = request.get_json()
-    routing_key = data.get("routing_key") #Tomamos la routing_key del json
+    routing_key = data.get("data")["headers"]["routing_key"] #Tomamos la routing_key del json
 
     if not routing_key:
         return jsonify({"error": "Missing 'routing_key'"}), 400 #Si no hay routing_key
