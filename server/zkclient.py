@@ -1,7 +1,7 @@
 from kazoo.client import KazooClient
 from time import sleep
 from functools import partial
-from util import get_machine_ip
+#from util import get_machine_ip
 import kazoo.exceptions
 import threading
 import uuid
@@ -26,7 +26,7 @@ class ZooKeeperClient():
         self.zk.ensure_path(self.BASE_PATH)
         
         self.node_name = str(uuid.uuid4())
-        self.machine_ip = socket.gethostbyname(socket.getfqdn())
+        self.machine_ip = "127.0.0.1"
 
         self.zk.ensure_path(self.NODES_PATH)
         self.zk.create(f"{self.NODES_PATH}{self.node_name}/", value=bytes(f"{self.machine_ip}:{self.FLASK_PORT}", encoding="utf-8"), ephemeral=True)

@@ -3,7 +3,7 @@ import threading
 from collections import defaultdict
 from message import Message
 import socket
-
+from grpc_replication import replicator_client
 from zkclient import ZooKeeperClient
 
 app = Flask(__name__)
@@ -46,6 +46,7 @@ def post():
 
     if operation in ["pull", "push", "subscribe"]:
         message_data = data.get("data")
+        replicator_client.get_message(data)
         
         message = Message(
             message_date=message_data["headers"].get("message_date"),
@@ -247,7 +248,8 @@ def subscribe(msg_type, history, message):
 if __name__ == "__main__":
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost', 0))
-    port = sock.getsockname()[1]
+    # port = sock.getsockname()[1]
+    port = 5000
     sock.close()
 
     zkcl = ZooKeeperClient(port)

@@ -24,17 +24,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10replicator.proto\"x\n\nMessageMOM\x12\x11\n\toperation\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x10\n\x08\x65xchange\x18\x03 \x01(\t\x12\x13\n\x0brouting_key\x18\x04 \x01(\t\x12\x14\n\x0cmessage_date\x18\x05 \x01(\x04\x12\x0c\n\x04\x62ody\x18\x06 \x01(\t\"%\n\x12ReplicationSuccess\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\x46\n\tReplicate\x12\x39\n\x13PopulateReplication\x12\x0b.MessageMOM\x1a\x13.ReplicationSuccess\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10replicator.proto\"\x8a\x01\n\nMessageMOM\x12\x11\n\toperation\x18\x01 \x01(\t\x12\x0c\n\x04type\x18\x02 \x01(\t\x12\x10\n\x08\x65xchange\x18\x03 \x01(\t\x12\x13\n\x0brouting_key\x18\x04 \x01(\t\x12\x14\n\x0cmessage_date\x18\x05 \x01(\x04\x12\x0c\n\x04\x62ody\x18\x06 \x01(\t\x12\x10\n\x08username\x18\x07 \x01(\t\"%\n\x12ReplicationSuccess\x12\x0f\n\x07success\x18\x01 \x01(\x08\x32\x46\n\tReplicate\x12\x39\n\x13PopulateReplication\x12\x0b.MessageMOM\x1a\x13.ReplicationSuccess\"\x00\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'replicator_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_MESSAGEMOM']._serialized_start=20
-  _globals['_MESSAGEMOM']._serialized_end=140
-  _globals['_REPLICATIONSUCCESS']._serialized_start=142
-  _globals['_REPLICATIONSUCCESS']._serialized_end=179
-  _globals['_REPLICATE']._serialized_start=181
-  _globals['_REPLICATE']._serialized_end=251
+  _globals['_MESSAGEMOM']._serialized_start=21
+  _globals['_MESSAGEMOM']._serialized_end=159
+  _globals['_REPLICATIONSUCCESS']._serialized_start=161
+  _globals['_REPLICATIONSUCCESS']._serialized_end=198
+  _globals['_REPLICATE']._serialized_start=200
+  _globals['_REPLICATE']._serialized_end=270
 # @@protoc_insertion_point(module_scope)
