@@ -26,7 +26,7 @@ class ZooKeeperClient():
         self.zk.ensure_path(self.BASE_PATH)
         
         self.node_name = str(uuid.uuid4())
-        self.machine_ip = socket.gethostbyname(socket.getfqdn())
+        self.machine_ip = get_machine_ip()
 
         self.zk.ensure_path(self.NODES_PATH)
         self.zk.create(f"{self.NODES_PATH}{self.node_name}/", value=bytes(f"{self.machine_ip}:{self.FLASK_PORT}", encoding="utf-8"), ephemeral=True)

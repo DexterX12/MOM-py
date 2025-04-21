@@ -11,11 +11,6 @@ ZK_PATH = "connected/"
 zk = KazooClient(hosts=IP_ZOOKEEPER)
 zk.start()
 
-# informacion = "192.168.1.1:12345"
-# zk.create(f"{ZK_PATH}nodo1", value=bytes(informacion, "utf-8"), ephemeral=True)
-# informacion = "192.168.1.2:12345"
-# zk.create(f"{ZK_PATH}nodo2", value=bytes(informacion, "utf-8"), ephemeral=True)
-
 if not zk.exists(ZK_PATH):
     zk.ensure_path(ZK_PATH) #Verificamos que la ruta exista, si no, la creamos para evitar errores
 
@@ -45,7 +40,6 @@ def routing():
     if len(contenders) > 0:
         # Only check this if it node already exists, if not, then ZooKeeper didn't do anything.
         if nodo and contenders[0] != nodo: # ZooKeeper made fail over, it takes precedence
-            requests.get(zk.get(f"{ZK_PATH}{contenders[0]}")[0].decode('utf-8')+"?key="+routing_key)
             return jsonify({
                 "routing_key": routing_key,
                 "assigned_node": contenders[0],
@@ -56,7 +50,6 @@ def routing():
         return jsonify({"error": "No nodes available"}), 503 #Si no hay nosdos disponibles
     
     print(routing_key +" pertenece a " + nodo)
-    requests.get(zk.get(f"{ZK_PATH}{nodo}")[0].decode('utf-8')+"?key="+routing_key)
 
     return jsonify({
         "routing_key": routing_key,

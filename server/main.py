@@ -251,4 +251,4 @@ if __name__ == "__main__":
     sock.close()
 
     zkcl = ZooKeeperClient(port)
-    app.run(port=port)
+    app.run(port=port, host="0.0.0.0")
