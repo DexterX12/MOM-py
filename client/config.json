@@ -1,5 +1,5 @@
 {
-    "MOM_SERVER_LOCATION": "http://127.0.0.1:5000",
+    "MOM_SERVER_LOCATION": "https://3hf9pm7wjd.execute-api.us-east-1.amazonaws.com",
     "USERNAME": "admin",
     "PASSWORD": "admin"
 }
