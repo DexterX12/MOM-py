@@ -36,8 +36,8 @@ def check_token():
         try:
             token = auth.split(" ")[1]
             # Not failing means they are who they claim to be
-            decoded = jwt.decode(token, app.secret_key, algorithms="HS256")
-            return jsonify({"user": decoded["user"]}), 200
+            jwt.decode(token, app.secret_key, algorithms="HS256")
+            return jsonify({"success": "si"}), 200
             
         except jwt.exceptions.InvalidTokenError:
             return jsonify({"error": "Invalid token provided"}), 401
