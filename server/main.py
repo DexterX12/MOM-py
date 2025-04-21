@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, Response
 import threading
 from collections import defaultdict
 from message import Message
+import socket
 
 from zkclient import ZooKeeperClient
 
@@ -17,9 +18,10 @@ user_queues = defaultdict(list)
 #app.config.from_prefixed_env() # ENVIROMENT VARIABLE FLASK_SECRET_KEY
 lock = threading.Lock()
 zkcl = None
+FLASK_PORT = None
 
 with app.app_context():
-    zkcl = ZooKeeperClient()
+    
 
 @app.route("/", methods=["GET"])
 def welcoming():
@@ -245,3 +247,10 @@ def subscribe(msg_type, history, message):
             "user_id": user_id,
             "queue_name": queue_name
         }), 200
+
+if __name__ == "__main__":
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(('localhost', 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    app.run(port=port)

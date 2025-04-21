@@ -11,13 +11,14 @@ import pathlib
 watched_partitions = set()
 
 class ZooKeeperClient():
-    def __init__(self):
+    def __init__(self, FLASK_PORT):
         path = pathlib.Path("config.json")
         with open(f"{pathlib.Path.absolute(path)}", "r") as file:
             self.CONFIG = json.load(file)
 
         self.BASE_PATH = self.CONFIG["PARTITIONS_LOCATION"]
         self.NODES_PATH = self.CONFIG["NODES_LOCATION"]
+        self.FLASK_PORT = FLASK_PORT
 
         self.zk = KazooClient(hosts=self.CONFIG["ZOOKEEPER_LOCATION"])
         self.zk.start(timeout=5)
@@ -27,7 +28,7 @@ class ZooKeeperClient():
         self.machine_ip = socket.gethostbyname(socket.getfqdn())
 
         self.zk.ensure_path(self.NODES_PATH)
-        self.zk.create(f"{self.NODES_PATH}{self.node_name}/", value=bytes(f"{self.node_name} {self.machine_ip}", encoding="utf-8"), ephemeral=True)
+        self.zk.create(f"{self.NODES_PATH}{self.node_name}/", value=bytes(f"{self.machine_ip}:{self.FLASK_PORT}", encoding="utf-8"), ephemeral=True)
 
         @self.zk.ChildrenWatch(path=self.BASE_PATH)
         def change_awareness(children):
@@ -85,7 +86,7 @@ class ZooKeeperClient():
 
         path = f"{self.BASE_PATH}{routing_key}/leader"
         try:
-            self.zk.create(path, ephemeral=True, value=bytes(self.machine_ip, encoding="utf-8"))
+            self.zk.create(path, ephemeral=True, value=bytes(self.node_name, encoding="utf-8"))
         except kazoo.exceptions.NodeExistsError:
             pass
 
