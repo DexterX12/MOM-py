@@ -17,13 +17,12 @@ def log_in():
         return jsonify({"error": "Invalid credentials!"}), 401
     
     # expects and ID from user as bearer identifier
-    auth_token = jwt.encode({"id": user["id"]}, app.secret_key, algorithm="HS256")
+    auth_token = jwt.encode({"user": user["username"]}, app.secret_key, algorithm="HS256")
     return jsonify({"token": auth_token}), 200
 
 @app.route("/validate", methods=["POST"])
 def check_token():
     auth = request.headers.get("Authorization")
-    user = None
 
     if not auth:
         response = Response()
@@ -37,8 +36,8 @@ def check_token():
         try:
             token = auth.split(" ")[1]
             # Not failing means they are who they claim to be
-            jwt.decode(token, app.secret_key, algorithms="HS256")
-            return jsonify({"success": 1}), 200
+            decoded = jwt.decode(token, app.secret_key, algorithms="HS256")
+            return jsonify({"user": decoded["user"]}), 200
             
         except jwt.exceptions.InvalidTokenError:
             return jsonify({"error": "Invalid token provided"}), 401
