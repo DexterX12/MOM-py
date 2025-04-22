@@ -17,7 +17,7 @@ def log_in():
         return jsonify({"error": "Invalid credentials!"}), 401
     
     # expects and ID from user as bearer identifier
-    auth_token = jwt.encode({"user": user["username"]}, app.secret_key, algorithm="HS256")
+    auth_token = jwt.encode({"user": user}, app.secret_key, algorithm="HS256")
     return jsonify({"token": auth_token}), 200
 
 @app.route("/validate", methods=["POST"])

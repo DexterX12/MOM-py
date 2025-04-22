@@ -14,7 +14,7 @@ class Connection:
             "user": config["USERNAME"],
             "pass": config["PASSWORD"]
         })
-        
+
         token = response.json()["token"]
 
         if (token):
@@ -28,7 +28,6 @@ class Connection:
             response = requests.post(self.location+"/send", json={
                 "operation": "pull",
                 "type": self.type,
-                "username": "asd",
                 "data": {
                     "headers": {
                         "exchange": self.exchange,
@@ -50,7 +49,6 @@ class Connection:
         response = requests.post(self.location+"/send", json={
             "operation": "push",
             "type": self.type,
-            "username": "asd",
             "data": {
                 "headers": {
                     "exchange": self.exchange,

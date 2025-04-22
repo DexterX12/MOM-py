@@ -34,9 +34,9 @@ def post():
     data = request.json
     msg_type = data.get("type")
     operation = data.get("operation")
-    user = data.get("username")
+    user = data.get("user")
     history.append(user)
-    
+
     if not user:
         return jsonify({"error": "Could not identify the user making the request"})
         
