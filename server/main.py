@@ -119,7 +119,7 @@ def pull(message, history, data):
             if exchange in exchanges:
                 for queue in exchanges[exchange]:
                     print("hola",queue["users_subscribed"])
-                    if queue["routing_key"] == routing_key and queue["queue"] and (history[0]["id"] in queue["users_subscribed"]):
+                    if queue["routing_key"] == routing_key and queue["queue"]:
                         message = queue["queue"].pop(0)
 
                         replicator_client.get_message(data)
