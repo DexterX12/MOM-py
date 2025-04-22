@@ -1,15 +1,19 @@
 from . import replicator_pb2
 from . import replicator_pb2_grpc
+from util import get_machine_ip
 import grpc
 from kazoo.client import KazooClient
 
-IP_ZOOKEEPER = "158.247.127.78:6666"
+IP_ZOOKEEPER = "127.0.0.1:2181"
 ZK_PATH = "connected/"
 
 zk = KazooClient(hosts=IP_ZOOKEEPER)
 zk.start()
 
 def get_message(datos):
+    if ("replication" in datos): # Stop replicating yourself endlessly!
+        return
+
     zk.ensure_path(ZK_PATH)
     nodos = zk.get_children(ZK_PATH)
     znodes = []
@@ -18,6 +22,9 @@ def get_message(datos):
         ip = znode[0].decode("utf-8").split(":")[0]
         znodes.append(ip)
     for i in znodes:
+        if (i == get_machine_ip()):
+            continue
+        
         with grpc.insecure_channel(f"{i}:50051") as channel:
             stub = replicator_pb2_grpc.ReplicateStub(channel)
             response = stub.PopulateReplication(replicator_pb2.MessageMOM(
@@ -28,8 +35,7 @@ def get_message(datos):
             operation=datos["operation"],
             username=datos["username"],
             message_date=datos["data"]["headers"]["message_date"]
-        
-    ))
-    print(response)
+            ))
+            print(response)
     
     

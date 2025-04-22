@@ -5,6 +5,7 @@ from message import Message
 import socket
 from grpc_replication import replicator_client
 from zkclient import ZooKeeperClient
+from sys import argv
 
 app = Flask(__name__)
 
@@ -29,6 +30,7 @@ def welcoming():
 
 @app.route("/", methods=["POST"])
 def post():
+    print("LOL")
     history = []
     data = request.json
     msg_type = data.get("type")
@@ -46,7 +48,6 @@ def post():
 
     if operation in ["pull", "push", "subscribe"]:
         message_data = data.get("data")
-        replicator_client.get_message(data)
         
         message = Message(
             message_date=message_data["headers"].get("message_date"),
@@ -56,21 +57,20 @@ def post():
         )
         
         if operation == "push" and msg_type=="q":
-            return bind_queue(message)
+            return bind_queue(message, data)
         elif operation == "pull" and msg_type=="q":
-            return pull(message, history)
+            return pull(message, history, data)
         elif operation == "push" and msg_type=="t":
-            return push_to_topic(message)
+            return push_to_topic(message, data)
         elif operation == "pull" and msg_type=="t":
-            return pull_topic(message, history)
+            return pull_topic(message, history, data)
         elif operation=="subscribe":
-            return subscribe(msg_type, history,message)
-    
+            return subscribe(msg_type, history,message, data)
         
 #-------------------------Queues--------------------------
 
 #creation of the queue - exchange, routing key (productor)  
-def bind_queue(message):
+def bind_queue(message, data):
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
 
@@ -97,6 +97,7 @@ def bind_queue(message):
                 })
 
         zkcl.track_partition(routing_key)
+        replicator_client.get_message(data)
 
         return jsonify({
             "status": "Message pushed",
@@ -106,8 +107,7 @@ def bind_queue(message):
         }), 200
     
 #client requests a message in the queue
-def pull(message, history):
-    print("HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+def pull(message, history, data):
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
 
@@ -123,6 +123,9 @@ def pull(message, history):
                     print("hola",queue["users_subscribed"])
                     if queue["routing_key"] == routing_key and queue["queue"] and (history[0]["id"] in queue["users_subscribed"]):
                         message = queue["queue"].pop(0)
+
+                        replicator_client.get_message(data)
+
                         return jsonify({
                         "status": "Message delivered",
                         "queue_name": queue_name,
@@ -137,7 +140,7 @@ def pull(message, history):
 
 #-------------------------TOPICS--------------------------
 
-def push_to_topic(message):
+def push_to_topic(message, data):
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
 
@@ -165,9 +168,10 @@ def push_to_topic(message):
                 "topics": [message],
                 "users_subscribed": []
             })
-    print(topics_exchange)
 
     zkcl.track_partition(routing_key)
+    replicator_client.get_message(data)
+
     return jsonify({
         "status": "Message pushed",
         "queue_name": queue_name,
@@ -177,14 +181,15 @@ def push_to_topic(message):
 
 
 
-def pull_topic(message, history):
+def pull_topic(message, history, data):
     user_id = history[0]["id"] 
     if not user_id:
         return jsonify({"error": "Missing user ID"}), 400
 
     with lock:
         if user_id in user_queues and user_queues[user_id]:
-            msg = user_queues[user_id].pop(0)  
+            msg = user_queues[user_id].pop(0)
+            replicator_client.get_message(data)
             return jsonify({
                 "status": "Message delivered",
                 "message": {
@@ -198,7 +203,7 @@ def pull_topic(message, history):
     return jsonify({"error": "No messages available"}), 404
 
 
-def subscribe(msg_type, history, message):
+def subscribe(msg_type, history, message, data):
     user_id = history[0]["id"]
     exchange = message.header["exchange"] 
     routing_key = message.header["routing_key"]
@@ -221,6 +226,7 @@ def subscribe(msg_type, history, message):
                         user_queues[user_id] = topic["topics"].copy()
                     break
 
+        replicator_client.get_message(data)
         return jsonify({
             "status": "Subscribed to topic",
             "user_id": user_id,
@@ -239,6 +245,7 @@ def subscribe(msg_type, history, message):
                         exchange["users_subscribed"].append(user_id)
                     break
 
+        replicator_client.get_message(data)
         return jsonify({
             "status": "Subscribed to queue",
             "user_id": user_id,
@@ -248,8 +255,13 @@ def subscribe(msg_type, history, message):
 if __name__ == "__main__":
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('localhost', 0))
-    # port = sock.getsockname()[1]
-    port = 5000
+    port = sock.getsockname()[1]
+    if (len(argv) > 1):
+        if (argv[1].isnumeric()):
+            port = argv[1]
+        else:
+            raise Exception("Given port should be a number")
+        
     sock.close()
 
     zkcl = ZooKeeperClient(port)

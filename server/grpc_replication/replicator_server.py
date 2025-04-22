@@ -2,6 +2,7 @@ from concurrent import futures
 from . import replicator_pb2
 from . import replicator_pb2_grpc
 import grpc
+import requests
 
         # response = requests.post(self.location, json={
         #     "operation": "subscribe",
@@ -19,11 +20,11 @@ import grpc
 class ReplicateServicer(replicator_pb2_grpc.ReplicateServicer):
     def PopulateReplication(self, request, context):
         # Request is the object which has all the key:value pairs
-        print(request)
-        print(request.body) # For example, you can access the message's body like this
-        response = request.post("127.0.0.1:5000", json={
+        print(request.operation) # For example, you can access the message's body like this
+        response = requests.post("http://127.0.0.1:5001", json={
             "operation": request.operation,
             "type": request.type,
+            "username": request.username, 
             "data": {
                 "headers": {
                     "exchange": request.exchange,
@@ -31,8 +32,10 @@ class ReplicateServicer(replicator_pb2_grpc.ReplicateServicer):
                     "message_date": request.message_date
                 },
                 "body": request.body
-            }
+            },
+            "replication": True
         })
+        print(response.json(), "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         return replicator_pb2.ReplicationSuccess(success=True)
 
 
