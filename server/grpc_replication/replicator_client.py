@@ -41,7 +41,7 @@ def get_message(datos):
             routing_key=datos["data"]["headers"]["routing_key"],
             type=datos["type"],
             operation=datos["operation"],
-            username=datos["username"],
+            username=datos["user"]["username"],
             message_date=datos["data"]["headers"]["message_date"]
             ))
     zk.stop()
