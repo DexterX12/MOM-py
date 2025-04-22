@@ -16,7 +16,7 @@ if __name__ == "__main__":
         config = json.load(file)
 
     #Push Queue
-    cn = set_connection("q", "logs", "info")
+    cn = set_connection("q", "logs", "warnings")
     cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x.json()}"))
 
     #Push topic
