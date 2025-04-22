@@ -1,16 +1,24 @@
 from . import replicator_pb2
 from . import replicator_pb2_grpc
 from util import get_machine_ip
-import grpc
 from kazoo.client import KazooClient
+import grpc
+import json
+import pathlib
 
 IP_ZOOKEEPER = "127.0.0.1:2181"
 ZK_PATH = "connected/"
 
-zk = KazooClient(hosts=IP_ZOOKEEPER)
-zk.start()
+path = pathlib.Path("config.json")
+with open(f"{pathlib.Path.absolute(path)}", "r") as file:
+    CONFIG = json.load(file)
+    IP_ZOOKEEPER = CONFIG["ZOOKEEPER_LOCATION"]
+    ZK_PATH = CONFIG["NODES_LOCATION"]
 
 def get_message(datos):
+    zk = KazooClient(hosts=IP_ZOOKEEPER)
+    zk.start()
+
     if ("replication" in datos): # Stop replicating yourself endlessly!
         return
 
@@ -36,6 +44,4 @@ def get_message(datos):
             username=datos["username"],
             message_date=datos["data"]["headers"]["message_date"]
             ))
-            print(response)
-    
-    
+    zk.close()

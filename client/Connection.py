@@ -14,8 +14,7 @@ class Connection:
             "user": config["USERNAME"],
             "pass": config["PASSWORD"]
         })
-
-        print(response.json())
+        
         token = response.json()["token"]
 
         if (token):
@@ -26,7 +25,7 @@ class Connection:
             return PermissionError("No authorization token has been provided")
 
         while True:
-            response = requests.post(self.location, json={
+            response = requests.post(self.location+"/send", json={
                 "operation": "pull",
                 "type": self.type,
                 "username": "asd",
@@ -48,7 +47,7 @@ class Connection:
         if not self.__connection_token:
             return PermissionError("No authorization token has been provided")
         
-        response = requests.post(self.location, json={
+        response = requests.post(self.location+"/send", json={
             "operation": "push",
             "type": self.type,
             "username": "asd",
@@ -70,7 +69,7 @@ class Connection:
         if not self.__connection_token:
             return PermissionError("No authorization token has been provided")
         
-        response = requests.post(self.location, json={
+        response = requests.post(self.location+"/send", json={
             "operation": "subscribe",
             "type": self.type,
             "username": "asd",
