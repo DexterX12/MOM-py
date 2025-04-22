@@ -41,3 +41,6 @@ def check_token():
             
         except jwt.exceptions.InvalidTokenError:
             return jsonify({"error": "Invalid token provided"}), 401
+        
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

@@ -30,15 +30,13 @@ def welcoming():
 
 @app.route("/", methods=["POST"])
 def post():
-    print("LOL")
     history = []
     data = request.json
     msg_type = data.get("type")
     operation = data.get("operation")
     user = data.get("username")
     history.append(user)
-
-
+    
     if not user:
         return jsonify({"error": "Could not identify the user making the request"})
         
@@ -253,16 +251,12 @@ def subscribe(msg_type, history, message, data):
         }), 200
 
 if __name__ == "__main__":
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('localhost', 0))
-    port = sock.getsockname()[1]
+    port = 5000
     if (len(argv) > 1):
         if (argv[1].isnumeric()):
             port = argv[1]
         else:
             raise Exception("Given port should be a number")
-        
-    sock.close()
 
     zkcl = ZooKeeperClient(port)
     app.run(port=port, host="0.0.0.0")

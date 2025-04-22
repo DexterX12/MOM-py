@@ -1,0 +1,13 @@
+[Unit]
+Description=Replication Service
+After=network.target
+
+[Service]
+ExecStart=/home/ubuntu/MOM-py/.venv/bin/python3 -m grpc_replication.replicator_server
+WorkingDirectory=/home/ubuntu/MOM-py/server
+Restart=always
+User=ubuntu
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

@@ -4,8 +4,8 @@ def get_machine_ip():
         interfaces = netifaces.interfaces()
         interf = ""
 
-        if ("enX" in interfaces):
-            interf = "enX"
+        if ("enX0" in interfaces):
+            interf = "enX0"
         elif ("en0" in interfaces):
             interf = "en0"
         else:

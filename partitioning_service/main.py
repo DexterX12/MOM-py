@@ -57,3 +57,6 @@ def routing():
         "node_location": zk.get(f"{ZK_PATH}{nodo}")[0].decode('utf-8')
     }) #Devuelve la routing_key y el nodo asignado
 
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
