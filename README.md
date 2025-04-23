@@ -1,5 +1,4 @@
-# Message-Oriented Middleware
-Este middleware está diseñado para la comunicación  y transferencia de mensajes entre clientes, aplicando principios de sistemas distribuidos.
+## Materia: ST0263-251
 
 ### Integrantes del proyecto:
 
@@ -9,6 +8,12 @@ Wendy Benítez Gómez - wdbenitezg@eafit.edu.co
 
 Fredy Cadavid Franco - fcadavidf@eafit.edu.co
 
+### Profesor
+Edwin Nelson Montoya Múnera - emontoya@eafit.edu.co
+
+# Message-Oriented Middleware
+Este middleware está diseñado para la comunicación  y transferencia de mensajes entre clientes, aplicando principios de sistemas distribuidos.
+
 ## Índice
 
 - [Análisis y requerimientos iniciales](#análisis-y-requerimientos-iniciales)
@@ -16,13 +21,20 @@ Fredy Cadavid Franco - fcadavidf@eafit.edu.co
 	- [Mensajería, colas y tópicos](#mensajería-colas-y-tópicos)
 	- [Autenticación](#autenticación)
 	- [Arquitectura y Detalles](#arquitectura-y-detalles)
-- [Ejecución](#ejecución)
+- [Desarrollo en entorno local](#desarrollo-en-entorno-local)
 	- [Instalación](#instalación)
 		- [Servidor](#servidor)
 		- [Replicación](#replicación)
 		- [Autenticación](#autenticación)
 		- [Particionamiento](#particionamiento)
 		- [Cliente](#cliente)
+- [Despliegue en producción](despliegue-en-producción)
+	- [Composición y direccionamiento](#composición-y-direccionamiento)
+	- [Configuración y descripción de parámetros](#configuración-y-descripción-de-parámetros)
+		- [Funciones Lambda](#funciones-lambda)
+		- [Grupos de seguridad](#grupos-de-seguridad)
+	- [Lanzar servidores](#lanzar-servidores)
+		- [Cliente y uso del software](#cliente-y-uso-del-software)
 - [Referencias](#referencias)
 
 ## Análisis y requerimientos iniciales
@@ -76,7 +88,7 @@ Para mantener control de qué nodos existen y cuáles son lideres de cada partic
 
 Cada uno de los nodos le ofrece a ZooKeeper la metadata relevante para la comunicación de mensajes, así como para temas de particionamiento y replicación.
 
-## Ejecución
+## Desarrollo en entorno local
 Este proyecto requiere ***al menos*** Python 3.10, utilizando las siguientes librerías:
 * **kazoo:** API de comunicación para ZooKeeper
 * **sqlite3:** API de base de datos para registro (manual) de usuarios 
@@ -149,9 +161,136 @@ Dentro del directorio `/client` se encuentran los archivos para realizar la cone
     "PASSWORD": "admin"
 }
 ```
-Dentro del mismo directorio se encuentra el archivo `Connection.py` el cual se encarga de establecer la comunicación y conexión inicial, además de la autenticación hacia el servidor. Este archivo es necesario para cualquier conexión, en caso de probar conexiones manuales. El archivo `main.py` posee un ejemplo con diferentes mensajes.
+Dentro del mismo directorio se encuentra el archivo `Connection.py` el cual se encarga de establecer la comunicación y conexión inicial, además de la autenticación hacia el servidor. Este archivo es necesario para cualquier conexión, en caso de probar conexiones manuales. El archivo `main.py` posee un ejemplo con diferentes mensajes. Para ejecutar el cliente, se utiliza el siguiente comando dentro del directorio `/client`:
 
-Para establecer una conexión inicial hacia el servidor, se puede utilizar el siguiente snippet:
+    python main.py
+
+Para un ejemplo más exhaustivo, léase la sección de guía en la parte de despliegue.
+
+## Despliegue en producción
+
+### Composición y direccionamiento
+El despliegue en producción se realizó en AWS. Está compuesto por las siguientes máquinas, seguido de sus direcciones:
+
+Máquinas EC2
+* MOM 1: Máquina de servidor MOM para el procesamiento de los mensajes.  - 172.31.81.164
+* MOM 2: Máquina de servidor MOM para el procesamiento de los mensajes. - 172.31.80.113
+* MOM 3: Máquina de servidor MOM para el procesamiento de los mensajes. - 172.31.93.145
+* ZooKeeper y Partitioning Service - 172.31.25.120
+* Servicio de autenticación - 172.31.25.86
+
+API Gateway
+* Autenticación: **[https://3hf9pm7wjd.execute-api.us-east-1.amazonaws.com/auth](https://3hf9pm7wjd.execute-api.us-east-1.amazonaws.com/auth)**
+* Envio de mensajes: **[https://3hf9pm7wjd.execute-api.us-east-1.amazonaws.com/send](https://3hf9pm7wjd.execute-api.us-east-1.amazonaws.com/send)**
+
+Todas las máquinas se encuentran dentro de la red privada, puesto que se define una API Gateway que permite la conexión a los servicios de manera interna. Para lograr esto, se utilizó dos funciones Lambda, nombradas "sendPartition" para el envío de mensajes, el cuál lo activa el endpoint `/send`, y la función "authUser", que autentica los usuarios, activándolo el endpoint `/auth`
+
+![Funciones Lambda](https://i.imgur.com/Yxdau2v.png)
+
+
+![Instancias en AWS](https://i.imgur.com/u94JGQQ.png)
+
+
+### Configuración y descripción de parámetros
+
+#### Funciones Lambda
+Como se mencionó anteriormente, se utilizan 2 funciones Lambda, los cuales se disparan al momento de entrar en los endpoints previamente mencionados. La estructura de los Lambda es la siguiente:
+
+La función Lambda `authUser` posee el siguiente código:
+```python
+import json
+import urllib3
+
+def  lambda_handler(event, context):
+	data = json.loads(event["body"])
+	user = data["user"]
+	passw = data["pass"]
+
+	http = urllib3.PoolManager()
+	url =  "http://172.31.25.86:5000/auth"
+
+	r = http.request("POST", url, body=json.dumps({
+		"user": user,
+		"pass": passw
+	}), headers={'Content-Type': 'application/json'})
+
+	return {
+	'statusCode': 200,
+	'body': r.data
+	}
+```
+
+La función Lambda `sendPartition` posee el siguiente código:
+```python
+import json
+import urllib3
+
+def  lambda_handler(event, context):
+	http = urllib3.PoolManager()
+	partitioner_location =  f"172.31.25.120:5000"
+	auth_location =  f"172.31.25.86:5000"
+	data = json.loads(event["body"])
+	
+	r = http.request("POST", f"http://{auth_location}/validate", headers={
+		"Authorization": event["headers"]["authorization"],
+		"Accept": "application/json",
+		"Content-Type": "application/json"
+	}, body=json.dumps({}))
+
+	if r.status !=  200:
+		return {
+			'statusCode': r.status,
+			'body': {"error": "Could not validate user"}
+		}
+
+	data["user"] = json.loads(r.data)["user"]
+	
+	req = http.request("POST", f"http://{partitioner_location}/routing", body=json.dumps(data), headers={
+		"Accept": "application/json",
+		"Content-Type": "application/json"
+	})
+	
+	mom_location = json.loads(req.data)["node_location"]
+	
+	req_f = http.request("POST", f"http://{mom_location}/", body=json.dumps(data), headers={
+	"Accept": "application/json",
+	"Content-Type": "application/json"
+	})
+
+	return {
+		'statusCode': 200,
+		'body': req_f.data
+	}
+```
+#### Grupos de seguridad
+Todos las máquinas Y las funciones Lambda utilizan la misma VPC y grupos de seguridad para la conexión entre los componentes. Está configurado de la siguiente manera:
+![Configuración de grupo de seguridad](https://i.imgur.com/NqkOHU4.png)
+
+Este grupo de seguridad expone los puertos utilizados en los servidores para una lista de subredes internas específicas, compartiendo la misma zona de disponibilidad de las funciones Lambda
+
+### Lanzar servidores
+Los servidores se pueden lanzar con los archivos `.sh` dentro de la carpeta `/config`, estos crean y ejecutan automáticamente los archivos de Python correspondientes al servidor a ejecutar como un servicio en systemd; su estructura se explicó previamente en la sección de ejecución local.
+
+Por ejemplo, para la ejecución del servicio de autenticación, basta con darle permisos de ejecución al archivo `auth.service`, de la siguiente manera:
+
+    sudo chmod 777 auth.service
+Para finalmente ejecutar el proceso de instalación en el archivo .sh
+
+    sudo ./install_auth.sh
+
+Cuando el script termine de ejecutarse, se puede ver el estado de la aplicación utilizando `systemctl status auth`, dando una respuesta similar a esta:
+
+![Servicio de autenticación corriendo](https://i.imgur.com/EQDnTII.png)
+
+El proceso es el mismo para todos los demás servidores con sus respectivos `.service` e `install_[service].sh`
+
+#### Cliente y uso del software
+Dentro del directorio`/client` del repositorio existe el archivo `main.py` junto con su archivo de configuración `config.json` (léase sección de ejecución local para su configuración básica) para establecer conexiones de manera básica.
+
+En el mismo directorio, basta con ejecutar el archivo main de la siguiente forma: `python main.py`
+
+Para realizar una petición de push a una cola con exchange `logs` y nombre de cola `warnings`, se puede utilizar el siguiente snippet como una prueba de conexión:
+
 ```python
 import json, pathlib
 import Connection
@@ -175,10 +314,29 @@ def set_connection(type, exchange, routing_key):
 if __name__ == "__main__":
 	load_config()
 
-    #Push Queue
+    # Push Queue
+    # Se autentica y crea la conexión a la API
     cn = set_connection("q", "logs", "info")
+	# Publica "Mensaje1" en la cola
     cn.publish("Mensaje1", lambda x: print(f"Se envio, con respuesta: {x.json()}"))
+	
 ```
+
+Obteniendo una respuesta similar a esta:
+
+![Respuesta de push](https://i.imgur.com/1HpOOzc.png)
+
+Para consumir información de una cola, se debe utilizar el método `consume`, del mismo objeto de la conexión:
+
+```python
+cn.consume(lambda x: print(f"El mensaje recibido fue: {x.json()}"))
+```
+
+Con resultado:
+
+![Resultado de pull](https://i.imgur.com/w5yoIfd.png)
+
+
 
 ## Referencias
 1. _ActiveMQ con Message Oriented Middleware_. (s. f.). SG Buzz. https://sg.com.mx/revista/41/activemq-message-oriented-middleware
