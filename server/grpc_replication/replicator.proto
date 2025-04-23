@@ -12,6 +12,7 @@ message MessageMOM {
     uint64 message_date = 5;
     string body = 6; 
     string username = 7;
+    string userid = 8;
 }
 
 message ReplicationSuccess {

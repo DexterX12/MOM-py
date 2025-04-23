@@ -10,7 +10,10 @@ class ReplicateServicer(replicator_pb2_grpc.ReplicateServicer):
         response = requests.post("http://127.0.0.1:5000", json={
             "operation": request.operation,
             "type": request.type,
-            "username": request.username, 
+            "user": {
+                "username": request.username,
+                "id":request.userid
+            },
             "data": {
                 "headers": {
                     "exchange": request.exchange,

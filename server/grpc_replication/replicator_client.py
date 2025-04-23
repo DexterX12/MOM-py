@@ -42,6 +42,7 @@ def get_message(datos):
             type=datos["type"],
             operation=datos["operation"],
             username=datos["user"]["username"],
+            userid=datos["user"]["id"],
             message_date=datos["data"]["headers"]["message_date"]
             ))
     zk.stop()
