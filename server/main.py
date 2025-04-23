@@ -38,7 +38,7 @@ def post():
     history.append(user)
 
     if not user:
-        return jsonify({"error": "Could not identify the user making the request"})
+        return jsonify({"error": "Could not identify the user making the request"}), 400
         
     
     if operation not in ["pull", "push", "subscribe"]:
