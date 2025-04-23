@@ -21,8 +21,8 @@ class MessageMOM(_message.Message):
     message_date: int
     body: str
     username: str
-    userid: str
-    def __init__(self, operation: _Optional[str] = ..., type: _Optional[str] = ..., exchange: _Optional[str] = ..., routing_key: _Optional[str] = ..., message_date: _Optional[int] = ..., body: _Optional[str] = ..., username: _Optional[str] = ..., userid: _Optional[str] = ...) -> None: ...
+    userid: int
+    def __init__(self, operation: _Optional[str] = ..., type: _Optional[str] = ..., exchange: _Optional[str] = ..., routing_key: _Optional[str] = ..., message_date: _Optional[int] = ..., body: _Optional[str] = ..., username: _Optional[str] = ..., userid: _Optional[int] = ...) -> None: ...
 
 class ReplicationSuccess(_message.Message):
     __slots__ = ("success",)
